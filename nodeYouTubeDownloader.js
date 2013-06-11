@@ -2,9 +2,9 @@
  * nodeYouTubeDownloader v0.1
  * https://github.com/kejjang/node-youtube-downloader
  *
- * Copyright 2013 Kej Jang
+ * Copyright (C) 2013 Kej Jang <kejjang@gmail.com>
  * Released under the WTFPL
- * http://www.wtfpl.net/txt/copying/
+ * http://www.wtfpl.net/
  *
  * Date: 2013-06-11
  */
