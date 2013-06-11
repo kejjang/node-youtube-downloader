@@ -179,16 +179,14 @@ var nodeYouTubeDownloader = {
 
 				process.stdout.write("video is downloading and save as " + file_name + ", please wait...\n");
 
-				http.get(options, function(res) {
-					res.on('data', function(data) {
-						file.write(data);
-					}).on('end', function() {
-						file.end();
-						process.stdout.write("video download complete.\n");
-						setTimeout(function(){
-							self.askRestart();
-						}, 800);
-					});
+				res.on('data', function(data) {
+					file.write(data);
+				}).on('end', function() {
+					file.end();
+					process.stdout.write("video download complete.\n");
+					setTimeout(function(){
+						self.askRestart();
+					}, 800);
 				});
 			}
 		});
