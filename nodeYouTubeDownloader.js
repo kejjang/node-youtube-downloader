@@ -106,7 +106,7 @@ var nodeYouTubeDownloader = {
 
 	getVideoInfo: function(vid, callback){
 		this.videoInfo.videoID = vid;
-		var video_info_url = 'http://www.youtube.com/get_video_info?video_id=' + vid + '&eurl=http://test.localhost.local/';
+		var video_info_url = 'http://www.youtube.com/get_video_info?eurl=http://test.localhost.local/&sts=1586&video_id=' + vid;
 		
 		var options = {
 			host: url.parse(video_info_url).host,
@@ -145,12 +145,45 @@ var nodeYouTubeDownloader = {
 			}
 
 			if(ignoreFormats.indexOf(fmt_map[i].itag) == -1){
-				this.videoInfo.urls.push({ itag: fmt_map[i].itag, url: fmt_map[i].url + "&signature=" + fmt_map[i].sig});
+				this.videoInfo.urls.push({ itag: fmt_map[i].itag, url: fmt_map[i].url + "&signature=" + this.getSignature(fmt_map[i])});
 				process.stdout.write('[' + dlCount++ + '] ' + this.fmt_str[fmt_map[i].itag].desc + "\n");
 			}
 		}
 		
 		this.askDownload();
+	},
+
+	getSignature: function(fmt){
+		if(fmt.sig != null){
+			return fmt.sig;
+		}else if(fmt.s != null){
+			return this.alternativeSignatureHandler(fmt.s);
+		}
+
+		return '';
+	},
+
+	alternativeSignatureHandler: function(s){
+		var sArray = s.split("");
+		var tmpA, tmpB;
+
+		tmpA = sArray[0];
+		tmpB = sArray[52];
+
+		sArray[0] = tmpB;
+		sArray[52] = tmpA;
+
+		tmpA = sArray[83];
+		tmpB = sArray[62];
+
+		sArray[83] = tmpB;
+		sArray[62] = tmpA;
+
+		sArray = sArray.slice(3);
+		sArray = sArray.reverse();
+		sArray = sArray.slice(3);
+
+		return sArray.join("");
 	},
 
 	downloadFile: function(fileIndex){
