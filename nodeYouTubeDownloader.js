@@ -1,12 +1,12 @@
 /*
- * nodeYouTubeDownloader v0.1
+ * nodeYouTubeDownloader v0.2
  * https://github.com/kejjang/node-youtube-downloader
  *
  * Copyright (C) 2013 Kej Jang <kejjang@gmail.com>
  * Released under the WTFPL
  * http://www.wtfpl.net/
  *
- * Date: 2013-06-11
+ * Date: 2013-09-26
  */
 var fs = require('fs'),
     url = require('url'),
@@ -64,6 +64,7 @@ var nodeYouTubeDownloader = {
 
 			if(checkResult.valid){
 				self.getVideoInfo(checkResult.vid, 'parseVideoInfo');
+				//self.getVideoInfo_alternative(checkResult.vid, 'parseVideoInfo_alternative');
 			} else {
 				self.wrongUrl();
 			}
@@ -126,32 +127,115 @@ var nodeYouTubeDownloader = {
 		});
 	},
 
+	getVideoInfo_alternative: function(vid, callback){
+		this.videoInfo.videoID = vid;
+		var video_info_url = 'http://www.youtube.com/watch?v=' + vid;
+		
+		var options = {
+			host: url.parse(video_info_url).host,
+			port: 80,
+			path: url.parse(video_info_url).path
+		};
+
+		var infos = '';
+		var self = this;
+
+		http.get(options, function(res) {
+			res.on('data', function(data) {
+				infos += data.toString();
+			}).on('end', function() {
+				// console.log(video_info_url);
+				// console.log(options);
+				// console.log(infos);
+				self[callback](infos);
+			});
+		});
+	},
+
 	parseVideoInfo: function(infos){
 		var ignoreFormats = ['43', '44', '45', '46', '100', '101', '102'];
 
 		var queries = querystring.parse(infos);
 
 		this.videoInfo.title = queries.title;
-		var fmt_map = queries.url_encoded_fmt_stream_map.split(',');
+		var fmt_map = '';
 
-		process.stdout.write("\n" + this.videoInfo.title + "\n");
+		try{
+			fmt_map = queries.url_encoded_fmt_stream_map.split(',');
+		}catch(err){}
 
-		var dlCount = 1;
-		for(var i in fmt_map){
-			fmt_map[i] = querystring.parse(fmt_map[i]);
+		if(fmt_map == ''){
+			this.getVideoInfo_alternative(this.videoInfo.videoID, 'parseVideoInfo_alternative');
+		}else{
+			process.stdout.write("\n" + this.videoInfo.title + "\n");
 
-			if(this.fmt_str[fmt_map[i].itag] == undefined){
-				this.fmt_str[fmt_map[i].itag] = { desc: '(' + fmt_map[i].type + ')', ext:'' };
+			var dlCount = 1;
+			for(var i in fmt_map){
+				fmt_map[i] = querystring.parse(fmt_map[i]);
+
+				if(this.fmt_str[fmt_map[i].itag] == undefined){
+					this.fmt_str[fmt_map[i].itag] = { desc: '(' + fmt_map[i].type + ')', ext:'' };
+				}
+
+				if(ignoreFormats.indexOf(fmt_map[i].itag) == -1){
+					this.videoInfo.urls.push({ itag: fmt_map[i].itag, url: fmt_map[i].url + "&signature=" + this.getSignature(fmt_map[i])});
+					process.stdout.write('[' + dlCount++ + '] ' + this.fmt_str[fmt_map[i].itag].desc + "\n");
+				}
 			}
-
-			if(ignoreFormats.indexOf(fmt_map[i].itag) == -1){
-				this.videoInfo.urls.push({ itag: fmt_map[i].itag, url: fmt_map[i].url + "&signature=" + this.getSignature(fmt_map[i])});
-				process.stdout.write('[' + dlCount++ + '] ' + this.fmt_str[fmt_map[i].itag].desc + "\n");
-			}
+			
+			this.askDownload();
 		}
-		
-		this.askDownload();
 	},
+
+	parseVideoInfo_alternative: function(infos){
+		var ignoreFormats = ['43', '44', '45', '46', '100', '101', '102'];
+
+		var regexp_title = new RegExp("<meta\\sname=\"title\"\\scontent=\"(.*?)\">", "ig");
+		var result_title = regexp_title.exec(infos);
+
+		var url_encoded_fmt_stream_map = '';
+		var regexp_fmt_map = new RegExp("\"url_encoded_fmt_stream_map\":\\s\"(.*?)\"", "ig");
+		var result_fmt_map = regexp_fmt_map.exec(infos);
+		var url_encoded_fmt_stream_map = '';
+
+		try{
+			this.videoInfo.title = result_title[1];
+			// have a html entities issue, will fix later
+
+			url_encoded_fmt_stream_map = result_fmt_map[1];
+		}catch(err){}
+
+		// console.log(url_encoded_fmt_stream_map);
+
+		var fmt_map = '';
+
+		try{
+			fmt_map = url_encoded_fmt_stream_map.split(',');
+		}catch(err){}
+
+		if(fmt_map == ''){
+			process.stdout.write("oh oh... something's wrong... ");
+			this.askRestart();
+		}else{
+			process.stdout.write("\n" + this.videoInfo.title + "\n");
+
+			var dlCount = 1;
+			for(var i in fmt_map){
+				fmt_map[i] = querystring.parse(fmt_map[i].replace(/\\u0026/g, '&'));
+
+				if(this.fmt_str[fmt_map[i].itag] == undefined){
+					this.fmt_str[fmt_map[i].itag] = { desc: '(' + fmt_map[i].type + ')', ext:'' };
+				}
+
+				if(ignoreFormats.indexOf(fmt_map[i].itag) == -1){
+					this.videoInfo.urls.push({ itag: fmt_map[i].itag, url: fmt_map[i].url + "&signature=" + this.getSignature(fmt_map[i])});
+					process.stdout.write('[' + dlCount++ + '] ' + this.fmt_str[fmt_map[i].itag].desc + "\n");
+				}
+			}
+
+			this.askDownload();
+		}
+	},	
 
 	getSignature: function(fmt){
 		if(fmt.sig != null){
