@@ -49,7 +49,17 @@ var nodeYouTubeDownloader = {
 		46:  { desc: 'WebM, 1920 x 540, Stereo 44KHz Vorbis' , ext: 'webm' },
 		100: { desc: 'WebM, 640 x 360, Stereo 44KHz Vorbis'  , ext: 'webm' },
 		101: { desc: 'WebM, 854 x 480, Stereo 44KHz Vorbis'  , ext: 'webm' },
-		102: { desc: 'WebM, 1280 x 720, Stereo 44KHz Vorbis' , ext: 'webm' }
+		102: { desc: 'WebM, 1280 x 720, Stereo 44KHz Vorbis' , ext: 'webm' },
+		133: { desc: 'MP4, 426 x 240, Stereo 44KHz AAC'      , ext: 'mp4' },
+		134: { desc: 'MP4, 640 x 360, Stereo 44KHz AAC'      , ext: 'mp4' },
+		135: { desc: 'MP4, 854 x 480, Stereo 44KHz AAC'      , ext: 'mp4' },
+		136: { desc: 'MP4, 1280 x 720, Stereo 44KHz AAC'     , ext: 'mp4' },
+		137: { desc: 'MP4, 1920 x 1080, Stereo 44KHz AAC'    , ext: 'mp4' },
+		139: { desc: 'M4A, 48 kbit/s audio only'             , ext: 'm4a' },
+		140: { desc: 'M4A, 128 kbit/s audio only'            , ext: 'm4a' },
+		141: { desc: 'M4A, 256 kbit/s audio only'            , ext: 'm4a' },
+		160: { desc: 'MP4, 256 x 144, Stereo 44KHz AAC'      , ext: 'mp4' },
+		264: { desc: 'MP4, 1920 x 1080, Stereo 44KHz AAC'    , ext: 'mp4' }  // not sure
 	},
 
 	start: function(){
@@ -153,7 +163,7 @@ var nodeYouTubeDownloader = {
 	},
 
 	parseVideoInfo: function(infos){
-		var ignoreFormats = ['43', '44', '45', '46', '100', '101', '102'];
+		var ignoreFormats = ['43', '44', '45', '46', '100', '101', '102', '264'];
 
 		var queries = querystring.parse(infos);
 
@@ -161,7 +171,8 @@ var nodeYouTubeDownloader = {
 		var fmt_map = '';
 
 		try{
-			fmt_map = queries.url_encoded_fmt_stream_map.split(',');
+			//fmt_map = queries.url_encoded_fmt_stream_map.split(',');
+			fmt_map = queries.adaptive_fmts.split(',');
 		}catch(err){}
 
 		if(fmt_map == ''){
@@ -188,13 +199,14 @@ var nodeYouTubeDownloader = {
 	},
 
 	parseVideoInfo_alternative: function(infos){
-		var ignoreFormats = ['43', '44', '45', '46', '100', '101', '102'];
+		var ignoreFormats = ['43', '44', '45', '46', '100', '101', '102', '264'];
 
 		var regexp_title = new RegExp("<meta\\sname=\"title\"\\scontent=\"(.*?)\">", "ig");
 		var result_title = regexp_title.exec(infos);
 
 		var url_encoded_fmt_stream_map = '';
-		var regexp_fmt_map = new RegExp("\"url_encoded_fmt_stream_map\":\\s\"(.*?)\"", "ig");
+		//var regexp_fmt_map = new RegExp("\"url_encoded_fmt_stream_map\":\\s\"(.*?)\"", "ig");
+		var regexp_fmt_map = new RegExp("\"adaptive_fmts\":\\s\"(.*?)\"", "ig");
 		var result_fmt_map = regexp_fmt_map.exec(infos);
 		var url_encoded_fmt_stream_map = '';
 
